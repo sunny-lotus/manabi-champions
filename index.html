@@ -12606,14 +12606,15 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     if(d.loadout!==undefined&&(!Array.isArray(d.loadout)||d.loadout.length>4||new Set(d.loadout).size!==d.loadout.length||!d.loadout.every(i=>num(i,count-1)&&d.got.includes(i))||d.equipped!==-1&&d.equipped!==undefined&&!d.loadout.includes(d.equipped)))throw Error('装備は持っているステッカーを4枚まで選んでね。');
     if(d.companions!==undefined&&!num(d.companions,R.mask))throw Error('仲間の記録が正しくないよ。');
     if(d.follower!==undefined&&(!Number.isInteger(d.follower)||d.follower < -1||d.follower>=R.companions.length||(d.follower>=0&&d.follower!==2&&!((d.companions||0)&(1<<R.enemyId(d.follower))))))throw Error('まだ仲間になっていない子は連れていけないよ。');
-    return {...(d.loadout===undefined?{}:{loadout:[...d.loadout]}),...(d.follower===undefined?{}:{follower:d.follower}),...(d.equipped===undefined?{}:{equipped:d.equipped}),...(d.companions===undefined?{}:{companions:d.companions}),v:2,xp:d.xp,got:[...d.got],subjects:Object.fromEntries(['算数','国語','社会','理科'].map(k=>[k,d.subjects[k]])),wins:d.wins};
+    if(d.followers!==undefined&&(!Array.isArray(d.followers)||d.followers.length<1||d.followers.length>2||new Set(d.followers).size!==d.followers.length||d.followers[0]!==d.follower||!d.followers.every(id=>Number.isInteger(id)&&id>=0&&id<R.companions.length&&(id===2||!!((d.companions||0)&(1<<R.enemyId(id)))))||d.followers.reduce((n,id)=>n+(id===2?10:R.companions[id].level||5),0)>50))throw Error('仲間は持っている子を2人まで、合計50以下で選んでね。');
+    return {...(d.followers===undefined?{}:{followers:[...d.followers]}),...(d.loadout===undefined?{}:{loadout:[...d.loadout]}),...(d.follower===undefined?{}:{follower:d.follower}),...(d.equipped===undefined?{}:{equipped:d.equipped}),...(d.companions===undefined?{}:{companions:d.companions}),v:2,xp:d.xp,got:[...d.got],subjects:Object.fromEntries(['算数','国語','社会','理科'].map(k=>[k,d.subjects[k]])),wins:d.wins};
   }
-  function encode(d,count){d=validate(d,count);const a=JSON.stringify([2,d.xp,d.got,['算数','国語','社会','理科'].map(k=>d.subjects[k]),d.wins,...(d.loadout!==undefined?[d.companions||0,d.equipped??-1,d.follower??-1,d.loadout]:d.follower!==undefined?[d.companions||0,d.equipped??-1,d.follower]:d.equipped!==undefined?[d.companions||0,d.equipped]:d.companions===undefined?[]:[d.companions])]);return 'MQ2:'+btoa(a)+':'+checksum(a);}
+  function encode(d,count){d=validate(d,count);const values=[2,d.xp,d.got,['算数','国語','社会','理科'].map(k=>d.subjects[k]),d.wins,...(d.loadout!==undefined?[d.companions||0,d.equipped??-1,d.follower??-1,d.loadout]:d.follower!==undefined?[d.companions||0,d.equipped??-1,d.follower]:d.equipped!==undefined?[d.companions||0,d.equipped]:d.companions===undefined?[]:[d.companions])];if(d.followers!==undefined){if(d.loadout===undefined)throw Error('新しい装備の記録が必要だよ。');values.push(d.followers);}const a=JSON.stringify(values);return 'MQ2:'+btoa(a)+':'+checksum(a);}
   function decode(s,count){
     if(typeof s!=='string'||s.length>3000||!/^MQ2:[A-Za-z0-9+/=]+:[a-f0-9]{8}$/.test(s))throw Error('学びクエストのQRコードをえらんでね。');
     const [,b,c]=s.split(':');let a;try{a=atob(b);}catch{throw Error('QRコードがこわれているよ。');}if(checksum(a)!==c)throw Error('QRコードがこわれているよ。');
-    let t;try{t=JSON.parse(a);}catch{throw Error('セーブを読み取れなかったよ。');}if(!Array.isArray(t)||![5,6,7,8,9].includes(t.length)||!Array.isArray(t[3])||t[3].length!==4)throw Error('対応していないセーブだよ。');
-    return validate({v:t[0],xp:t[1],got:t[2],subjects:Object.fromEntries(['算数','国語','社会','理科'].map((k,i)=>[k,t[3][i]])),wins:t[4],...(t.length>=6?{companions:t[5]}:{}),...(t.length>=7?{equipped:t[6]}:{}),...(t.length>=8?{follower:t[7]}:{}),...(t.length===9?{loadout:t[8]}:{})},count);
+    let t;try{t=JSON.parse(a);}catch{throw Error('セーブを読み取れなかったよ。');}if(!Array.isArray(t)||![5,6,7,8,9,10].includes(t.length)||!Array.isArray(t[3])||t[3].length!==4)throw Error('対応していないセーブだよ。');
+    return validate({v:t[0],xp:t[1],got:t[2],subjects:Object.fromEntries(['算数','国語','社会','理科'].map((k,i)=>[k,t[3][i]])),wins:t[4],...(t.length>=6?{companions:t[5]}:{}),...(t.length>=7?{equipped:t[6]}:{}),...(t.length>=8?{follower:t[7]}:{}),...(t.length>=9?{loadout:t[8]}:{}),...(t.length===10?{followers:t[9]}:{})},count);
   }
   function stats(totalXP){let level=1;while(level<40&&20*(level+1)*level<=totalXP)level++;return {level,attack:12+(level-1)*2,defense:4+(level-1),hp:80};}
   function weaknessBonus(subjects,weakness){return Math.floor(Math.sqrt(Math.max(0,subjects[weakness]||0)/10))*2;}
@@ -13033,7 +13034,7 @@ const AUDIO_CREDITS="# Recorded instruments — CC0 1.0\r\n\r\n- **Upright Piano
 })(typeof window==='undefined'?globalThis:window);
 
 (function(root){
- function make(data,sample=false,followers=null){const d=root.ManabiProgress.validate(data,60);if(!Array.isArray(d.loadout))throw Error('新しいQRでそうびを読み込んでね。');const effect=root.ManabiCombat.aggregate(d.loadout.map(i=>root.ManabiStickerSkills[i].passive)),base=root.ManabiProgress.stats(d.xp),party=followers||root.ChampionsParty.defaults(d);if(!root.ChampionsParty.valid(d,party))throw Error('仲間は異なる2人まで、合計50以下で選んでね。');return {data:d,followers:[...party],main:d.loadout.includes(d.equipped)?d.equipped:d.loadout[0]??-1,sample,effect,level:base.level,attack:Math.max(1,base.attack+effect.attack),defense:Math.max(0,base.defense+effect.defense),maxMP:root.ManabiCombat.mpCapacity(effect),maxHP:80+(base.level-1)*8};}
+ function make(data,sample=false,followers=null){const requested=followers||data.followers;const d=root.ManabiProgress.validate(requested?{...data,follower:requested[0],followers:[...requested]}:data,60);if(!Array.isArray(d.loadout))throw Error('新しいQRでそうびを読み込んでね。');const effect=root.ManabiCombat.aggregate(d.loadout.map(i=>root.ManabiStickerSkills[i].passive)),base=root.ManabiProgress.stats(d.xp),party=requested||root.ChampionsParty.defaults(d);if(!root.ChampionsParty.valid(d,party))throw Error('仲間は異なる2人まで、合計50以下で選んでね。');return {data:d,followers:[...party],main:d.loadout.includes(d.equipped)?d.equipped:d.loadout[0]??-1,sample,effect,level:base.level,attack:Math.max(1,base.attack+effect.attack),defense:Math.max(0,base.defense+effect.defense),maxMP:root.ManabiCombat.mpCapacity(effect),maxHP:80+(base.level-1)*8};}
  const api={make};root.ChampionsTeam=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window==='undefined'?globalThis:window);
 
@@ -13148,7 +13149,7 @@ function summary(b,i){const names={party:'こうげき強化',down:'こうげき
 const api={create,resolve,add,summary,recoveryPercent,mpRecovery,pace,takenDamage};root.ChampionsRules=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window==='undefined'?globalThis:window);
 
-const ROOM_RULE_VERSION="champions-20261102-bcbc3510236b6a3b";
+const ROOM_RULE_VERSION="champions-20261102-e464ce7a73d316dd";
 /* Cosmetic effects only: no damage, healing or MP calculation occurs here. */
 const BattleFX={running:null,pending:new Set(),
  clear(){for(const done of [...this.pending])done();document.querySelectorAll('.battle-fx-layer').forEach(e=>e.remove());document.querySelectorAll('.fx-acting,.fx-receiving').forEach(e=>e.classList.remove('fx-acting','fx-receiving'));this.running=null;this.pendingOnline=false;},
