@@ -1,0 +1,12 @@
+/* Keep long action labels inside each command at every viewport size. */
+.character-command{box-sizing:border-box;width:384px;min-width:0;max-width:calc(100% - 16px)}
+.character-command header{min-width:0}
+.character-command header strong{min-width:0;overflow-wrap:anywhere}
+.character-command .command-row{min-width:0;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.character-command .command-row button,
+.character-command .command-row button.selected{box-sizing:border-box;min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 5px;min-height:68px;white-space:normal;line-height:1.4;text-align:center}
+.character-command .command-row button strong{display:block;min-width:0;max-width:100%;font:inherit;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.4}
+.character-command .command-row button .icon{display:block;flex:0 0 auto;margin:0}
+.character-command .command-decision{min-width:0;flex-wrap:wrap}
+.character-command .command-decision>span,
+.character-command .command-decision small{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
